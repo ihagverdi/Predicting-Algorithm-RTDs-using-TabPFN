@@ -1,0 +1,188 @@
+'''
+This module contains functions for preprocessing the data, such as removing timeouts, removing instances with certain status, removing constant instances, feature imputation, and scaling.
+'''
+
+import numpy as np
+
+
+def remove_timeouts(runningtimes, cutoff, features=None, sat_ls=None):
+    """
+    Remove all instances with more than one value >= cutoff
+    """
+
+    if features is None:
+        features = [0] * runningtimes.shape[0]
+    if sat_ls is None:
+        sat_ls = [0] * runningtimes.shape[0]
+
+    new_rt = list()
+    new_ft = list()
+    new_sl = list()
+    assert runningtimes.shape[0] == len(features) == len(sat_ls)
+    for instance, feature, sat in zip(runningtimes, features, sat_ls):
+        if not np.any(instance >= cutoff):
+            new_ft.append(feature)
+            new_rt.append(instance)
+            new_sl.append(sat)
+    print(
+        "Discarding %d (%d) instances because not stated TIMEOUTS"
+        % (len(features) - len(new_ft), len(features))
+    )
+    return np.array(new_rt), np.array(new_ft), new_sl
+
+
+def remove_instances_with_status(runningtimes, features, sat_ls=None, status="CRASHED"):
+    if sat_ls is None:
+        print("Could not remove %s instances" % status)
+
+    new_rt = list()
+    new_ft = list()
+    new_sl = list()
+    assert runningtimes.shape[0] == len(features) == len(sat_ls)
+    for f, r, s in zip(features, runningtimes, sat_ls):
+        if not status in s:
+            new_rt.append(r)
+            new_sl.append(s)
+            new_ft.append(f)
+    print(
+        "Discarding %d (%d) instances because of %s"
+        % (len(features) - len(new_ft), len(features), status)
+    )
+    return np.array(new_rt), np.array(new_ft), new_sl
+
+
+def remove_constant_instances(runningtimes, features, sat_ls=None):
+    if sat_ls is None:
+        sat_ls = [0] * runningtimes.shape[0]
+
+    new_rt = list()
+    new_ft = list()
+    new_sl = list()
+    assert runningtimes.shape[0] == len(features) == len(sat_ls)
+    for f, r, s in zip(features, runningtimes, sat_ls):
+        if np.std(f) > 0:
+            new_rt.append(r)
+            new_sl.append(s)
+            new_ft.append(f)
+    print(
+        "Discarding %d (%d) instances because of constant features"
+        % (len(features) - len(new_ft), len(features))
+    )
+    return np.array(new_rt), np.array(new_ft), new_sl
+
+
+def feature_imputation(features, impute_val=-512, impute_with="median"):
+    cntr = 0
+    if impute_with == "median":
+        for col in range(features.shape[1]):
+            cntr += features[:, col].tolist().count(impute_val)
+            med = np.median(features[:, col])
+            features[:, col] = [med if i == impute_val else i for i in features[:, col]]
+    print("Imputed %d values with %s" % (cntr, impute_with))
+    return features
+
+
+def remove_zeros(runningtimes, features=None, sat_ls=None):
+    """
+    Remove all instances with more than one value == 0
+    """
+
+    if features is None:
+        features = [0] * runningtimes.shape[0]
+    if sat_ls is None:
+        sat_ls = [0] * runningtimes.shape[0]
+
+    new_rt = list()
+    new_ft = list()
+    new_sl = list()
+    assert runningtimes.shape[0] == len(features) == len(sat_ls)
+    for instance, feature, sat in zip(runningtimes, features, sat_ls):
+        if not np.any(instance <= 0):
+            new_ft.append(feature)
+            new_rt.append(instance)
+            new_sl.append(sat)
+    print(
+        "Discarding %d (%d) instances because of ZEROS"
+        % (len(features) - len(new_ft), len(features))
+    )
+    return np.array(new_rt), np.array(new_ft), new_sl
+
+
+def det_transformation(X):
+    """
+    Return min max scaling
+    """
+    min_ = np.min(X, axis=0)
+    max_ = np.max(X, axis=0) - min_
+    return min_, max_
+
+
+def del_constant_features(X_train, *arrays, threshold=1e-9):
+    """
+    Detects constant features in X_train and removes them from X_train
+    and all other provided arrays.
+
+    Args:
+        X_train (np.ndarray): Training features of shape (B, D).
+        *arrays (np.ndarray): Additional arrays of shape (B, D) to be filtered.
+        threshold (float): A small value to determine if a feature is constant. Default is 1e-9.
+
+    Returns:
+        tuple: A tuple containing the filtered X_train and filtered *arrays.
+    """
+    # Calculate the range (max - min) for each column
+    # np.ptp returns 0 for columns where all values are identical
+    constant_mask = np.ptp(X_train, axis=0) <= threshold
+
+    # Invert mask to get columns to keep
+    cols_to_keep = ~constant_mask
+
+    # Filter X_train
+    X_train_filtered = X_train[:, cols_to_keep]
+
+    # Filter all subsequent arrays using the same mask
+    filtered_arrays = [arr[:, cols_to_keep] for arr in arrays]
+
+    return X_train_filtered, *filtered_arrays
+
+
+def preprocess_feats(X_train, *arrays, threshold=1e-9):
+    """
+    Removes constant features and applies z-score standardization.
+
+    The constant feature mask, mean, and standard deviation are calculated solely from `X_train` and applied identically to all provided arrays.
+
+    Args:
+        X_train (np.ndarray): Training feature matrix of shape `(N, D)`.
+        *arrays (np.ndarray): Additional feature matrices, each of shape `(*, D)`.
+        threshold (float, optional): Peak-to-peak threshold below which a feature is considered constant. Defaults to 1e-9.
+
+    Returns:
+        Tuple[np.ndarray, ...]: A tuple `(X_train_processed, *arrays_processed)`, where each processed matrix has shape `(*, D_filtered)`.
+    """
+    constant_mask = np.ptp(X_train, axis=0) <= threshold
+
+    # Invert mask to get columns to keep
+    cols_to_keep = ~constant_mask
+
+    if not np.any(cols_to_keep):
+        cols_to_keep[0] = True
+
+    # Filter X_train and other arrays
+    X_train_filtered = X_train[:, cols_to_keep]
+    filtered_arrays = [arr[:, cols_to_keep] for arr in arrays]
+
+    # Calculate scaling parameters from training data
+    mean_ = X_train_filtered.mean(axis=0)
+    std_ = X_train_filtered.std(axis=0)
+
+    std_[std_ < threshold] = 1.0
+
+    # Apply to training data
+    X_train_filtered = (X_train_filtered - mean_) / std_
+
+    # Apply to other arrays
+    filtered_arrays = [(arr - mean_) / std_ for arr in filtered_arrays]
+
+    # Return training data + unpacked processed arrays
+    return (X_train_filtered, *filtered_arrays)

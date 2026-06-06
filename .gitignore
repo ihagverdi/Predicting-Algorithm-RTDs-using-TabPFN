@@ -1,0 +1,20 @@
+*data
+.venv/
+__pycache__/
+.vscode/
+*.pt
+*.pkl
+temp/
+tasks.txt
+*.pyc
+*.ckpt
+*.pth
+# Notebook checkpoints
+.ipynb_checkpoints/
+*cache/
+smac3_output/
+*_ignore*
+*copy*
+tests.py
+archive/
+*.lock

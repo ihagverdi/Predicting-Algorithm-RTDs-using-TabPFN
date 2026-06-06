@@ -1,0 +1,38 @@
+[project]
+name = "tabpfn_project"
+version = "1.0.0"
+description ="Master's Project conducted at University of Freiburg by Hagverdi Ibrahimli for the AutoML Lab."
+requires-python = "==3.13.0"
+
+dependencies = [
+    "tabpfn==7.1.0",
+    "numpy==2.3.5",
+    "scipy==1.17.0",
+    "scikit-learn==1.8.0",
+    "torch==2.10.0",
+    "torchvision==0.25.0",
+    "matplotlib==3.10.8",
+    "swig==4.4.1",
+    "configspace==1.2.2",
+    "statsmodels==0.14.6",
+    "pytest==9.0.2",
+    "smac==2.3.1",
+    "seaborn==0.13.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+tabpfn = { git = "https://github.com/ihagverdi/TabPFN.git", branch = "tabpfn-patched-7.1.0" }
+scikit-learn = { git = "https://github.com/ihagverdi/scikit-learn.git", branch = "scikit-learn-modified-1.8.0" }
+
