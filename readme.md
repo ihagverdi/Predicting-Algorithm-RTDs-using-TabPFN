@@ -1,5 +1,7 @@
 # Predicting Algorithm Runtime Distributions: An In-Context Learning Approach with TabPFN
 
+[![Paper](https://img.shields.io/badge/Paper-Google_Drive-blue?style=flat-square&logo=googledrive)](https://drive.google.com/file/d/1yp19FBigsxc0wSscSqwgq8NHez6vtQkN/view?usp=sharing)
+
 This repository contains the code for my Master’s Project carried out at the <a href="https://ml.informatik.uni-freiburg.de/">AutoML Lab</a>, University of Freiburg. The primary objective of this project is to assess the suitability of Prior-Data Fitted Networks (specifically, TabPFN [^4]) for the task of algorithm RTD prediction. We compare this approach against established SOTA baselines in the literature, including Random Forests and Gaussian Processes [^1], DistNet [^2], and Bayesian DistNet [^3]. Overall, our approach using TabPFN establishes a new state-of-the-art for this problem.
 
 ## Motivation
